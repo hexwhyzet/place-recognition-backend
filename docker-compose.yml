@@ -1,0 +1,111 @@
+version: '3.8'
+services:
+  postgresql:
+    container_name: postgresql
+    build:
+      dockerfile: db/postgres.Dockerfile
+    restart: unless-stopped
+#    healthcheck:
+#      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}'" ]
+    ports:
+      - "5432:5432"
+    volumes:
+      - "./data/postgres:/var/lib/postgresql/data"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DATABASE: admin
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:7.8
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    volumes:
+      - "./data/pgadmin:/var/lib/pgadmin"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_LISTEN_PORT: 5050
+    depends_on:
+      - postgresql
+#  clickhouse:
+#    container_name: clickhouse
+#    build:
+#      dockerfile: db/clickhouse.Dockerfile
+#    healthcheck:
+#      test: wget --no-verbose --tries=1 --spider http://clickhouse:8123/ping || exit 1
+#      interval: 5s
+#    user: "101:101"
+#    hostname: clickhouse
+#    volumes:
+#      - "./data/clickhouse/:/var/lib/clickhouse/"
+#      - "./data/clickhouse/:/var/log/clickhouse-server/"
+#    ports:
+#      - "8123:8123"
+#      - "9000:9000"
+#  grafana:
+#    container_name: grafana
+#    build:
+#      dockerfile: logging/grafana.Dockerfile
+#    hostname: grafana
+#    volumes:
+#      - "./data/grafana/:/var/lib/grafana"
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - clickhouse
+#  migration:
+#    container_name: migrations
+#    image: liquibase/liquibase:4.24.0
+#    volumes:
+#      - "./migrations/clickhouse:/liquibase/clickhouse"
+#      - "./migrations/drivers/clickhouse.jar:/liquibase/lib/clickhouse.jar"
+#    command: --defaultsFile=/liquibase/clickhouse/liquibase.properties --changeLogFile=/clickhouse/changelog.xml --logLevel=debug update
+#    depends_on:
+#      clickhouse:
+#        condition: service_healthy
+  qdrant:
+    container_name: qdrant
+    image: qdrant/qdrant:v1.6.1
+    hostname: qdrant
+    healthcheck:
+      test: bash -c ':> /dev/tcp/localhost/6333' || exit 1
+      interval: 5s
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - "./data/qdrant:/qdrant/storage"
+  fastapi:
+    container_name: fastapi
+    build:
+      dockerfile: server/fastapi.Dockerfile
+    hostname: fastapi
+    healthcheck:
+      test: wget --no-verbose --tries=1 http://localhost:8080/health || exit 1
+      interval: 5s
+    depends_on:
+#      migration:
+#        condition: service_completed_successfully
+      qdrant:
+        condition: service_started
+    environment:
+      - DB_PORT=5432
+      - DB_HOST=host.docker.internal
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_DATABASE=admin
+      - QDRANT_HOST=qdrant
+  nginx:
+    container_name: nginx
+    image: nginx:1.25.3
+    volumes:
+      - "./nginx.conf:/etc/nginx/nginx.conf:ro"
+    ports:
+      - "80:80"
+    depends_on:
+      fastapi:
+        condition: service_healthy

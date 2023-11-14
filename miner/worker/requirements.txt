@@ -1,0 +1,5 @@
+requests==2.31.0
+boto3==1.26.140
+pillow==9.5.0
+loguru==0.7.0
+numpy==1.24.3

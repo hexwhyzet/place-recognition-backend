@@ -1,0 +1,9 @@
+/miner/worker/tmp
+/data
+/db/local_cache
+/old
+/playgrounds
+.DS_Store
+.idea
+
+resources/buildings/rosreestr/moscow.gpkg

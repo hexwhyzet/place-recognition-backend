@@ -1,0 +1,17 @@
+version: '3'
+services:
+  manager:
+    build: ./manager
+    volumes:
+      - ./manager:/app
+    ports:
+      - "8000:8000"
+
+  worker:
+    build: ./worker
+    volumes:
+      - ./worker:/app
+    environment:
+      - MANAGER_HOST=manager
+    command: ["python", "./main.py", "--manager_ip", "manager:8000"]
+    scale: 5

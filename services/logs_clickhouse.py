@@ -1,0 +1,106 @@
+from typing import List, Union
+
+from clickhouse_connect.driver.client import Client
+from shapely import Point
+
+
+def create_request_log(client: Client,
+                       id: int,
+                       timestamp: int,
+                       ipv4: str,
+                       request_headers: dict,
+                       request_body: bytes,
+                       request_url: str,
+                       http_method: str,
+                       user_agent: str,
+                       response_headers: dict,
+                       response_body: bytes,
+                       status: int,
+                       response_time: float):
+    client.insert('request',
+                  data=[[
+                      id,
+                      timestamp,
+                      ipv4,
+                      request_headers,
+                      request_body,
+                      request_url,
+                      http_method,
+                      user_agent,
+                      response_headers,
+                      response_body,
+                      status,
+                      response_time,
+                  ]],
+                  column_names=[
+                      'ID',
+                      'Timestamp',
+                      'IPv4',
+                      'RequestHeaders',
+                      'RequestBody',
+                      'RequestURL',
+                      'HTTPMethod',
+                      'UserAgent',
+                      'ResponseHeaders',
+                      'ResponseBody',
+                      'Status',
+                      'ResponseTime'
+                  ])
+
+
+def create_recognition_log(client: Client,
+                           request_id: int,
+                           timestamp: int,
+                           result_building_id: int,
+                           closest_building_ids: List[int],
+                           closest_size: int,
+                           release_name: str,
+                           descriptor: List[float],
+                           descriptor_size: int,
+                           coordinates: Union[Point, None],
+                           model: str,
+                           predictor: str,
+                           show_result: bool):
+    client.insert('recognition',
+                  data=[[
+                      request_id,
+                      timestamp,
+                      result_building_id,
+                      closest_building_ids,
+                      closest_size,
+                      release_name,
+                      descriptor,
+                      descriptor_size,
+                      None if coordinates is None else str((coordinates.x, coordinates.y)),
+                      model,
+                      predictor,
+                      show_result,
+                  ]],
+                  column_names=[
+                      'RequestID',
+                      'Timestamp',
+                      'ResultBuildingID',
+                      'ClosestBuildingIDs',
+                      'ClosestSize',
+                      'ReleaseName',
+                      'Descriptor',
+                      'DescriptorSize',
+                      'Coordinates',
+                      'Model',
+                      'Predictor',
+                      'ShowResult'
+                  ],
+                  column_type_names=[
+                      'UInt128',
+                      'DateTime',
+                      'UInt64',
+                      'Array(UInt64)',
+                      'UInt32',
+                      'String',
+                      'Array(Float64)',
+                      'UInt32',
+                      'String',
+                      'String',
+                      'String',
+                      'Bool'
+                  ])
