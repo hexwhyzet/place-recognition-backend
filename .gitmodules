@@ -1,0 +1,3 @@
+[submodule "external/liquibase-clickhouse"]
+	path = external/liquibase-clickhouse
+	url = https://github.com/MEDIARITHMICS/liquibase-clickhouse.git
