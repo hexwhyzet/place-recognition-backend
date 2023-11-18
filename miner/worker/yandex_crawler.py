@@ -4,7 +4,7 @@ from typing import List
 import requests
 from pydantic import BaseModel
 
-from yandex_pano import yandex_pano_meta_url
+from miner.worker.yandex_pano import yandex_pano_meta_url
 
 
 class YandexPanoCrawlerResult(BaseModel):
@@ -45,5 +45,3 @@ def crawl_point(lat: float, lng: float):
 
     for related_pano in data["data"]["Data"]["Graph"]["Node"]:
         extra_pano_id = related_pano["panoid"]
-        
-

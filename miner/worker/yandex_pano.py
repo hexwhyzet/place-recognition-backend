@@ -2,7 +2,7 @@ import json
 
 import requests
 
-from common_pano import pano_tile_download, pano_download
+from miner.worker.common_pano import pano_tile_download, pano_download
 
 SIZE_X = 69
 SIZE_Y = 25

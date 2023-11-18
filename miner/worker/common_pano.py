@@ -19,12 +19,12 @@ def pano_tile_download(url: str) -> Image:
     return img
 
 
-def pano_download(func, pano_id, size_x, size_y, threads_num=1):
+def pano_download(func, pano_id, size_x, size_y, threads_num=1, zoom=None):
     if threads_num == 1:
-        tiles = [[func(pano_id, x, y) for x in range(size_x)] for y in range(size_y)]
+        tiles = [[func(pano_id, x, y, zoom=zoom) for x in range(size_x)] for y in range(size_y)]
     else:
         with ThreadPoolExecutor(max_workers=threads_num) as executor:
-            tiles = [[executor.submit(func, pano_id, x, y) for x in range(size_x)] for y in range(size_y)]
+            tiles = [[executor.submit(func, pano_id, x, y, zoom=zoom) for x in range(size_x)] for y in range(size_y)]
             for row in tiles:
                 as_completed(row)
             tiles = [[item.result() for item in row] for row in tiles]

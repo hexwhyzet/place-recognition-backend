@@ -11,13 +11,13 @@ class CoordinateSystem(str, Enum):
     PROJECTION = 'epsg:3857'
 
 
-MAIN_COORDINATES_SYSTEM = CoordinateSystem.PROJECTION
+MAIN_COORDINATE_SYSTEM = CoordinateSystem.PROJECTION
 
 
 class Coordinates(BaseModel):
     latitude: float
     longitude: float
-    system: CoordinateSystem = MAIN_COORDINATES_SYSTEM
+    system: CoordinateSystem = MAIN_COORDINATE_SYSTEM
 
     def __init__(self, latitude: float, longitude: float, system: Union[CoordinateSystem, str]):
         if isinstance(system, str):

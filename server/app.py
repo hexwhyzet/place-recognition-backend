@@ -101,10 +101,10 @@ def recognize(recognize_data: RecognizeData, request: Request):
         raise HTTPException(status_code=404, detail=f'Release "{RELEASE_COLLECTION_NAME}" does not exists')
     coordinates = None if recognize_data.coordinates is None else recognize_data.coordinates.point(
         CoordinateSystem.ELLIPSOID)
-    a = time.time_ns()
+    # a = time.time_ns()
     prediction = PREDICTOR.predict(session, recognize_data.descriptor)
-    b = time.time_ns()
-    logger.info(f"Predictor time a->b {(b - a) / 1e6}")
+    # b = time.time_ns()
+    # logger.info(f"Predictor time a->b {(b - a) / 1e6}")
     create_recognition(session=session,
                        request_id=uuid.UUID(hex=request.headers.get("x-request-id")),
                        timestamp=int(time.time()),
@@ -117,11 +117,16 @@ def recognize(recognize_data: RecognizeData, request: Request):
                        coordinates=coordinates,
                        model="MixVPR",
                        predictor=PredictByClosestDescriptor.__name__)
-    c = time.time_ns()
-    logger.info(f"Predictor time b->c {(c - b) / 1e6}")
+    # c = time.time_ns()
+    # logger.info(f"Predictor time b->c {(c - b) / 1e6}")
     if not selected_geo_object_exists(session, Building, prediction.answer.building_id):
         raise Exception("Recognized building was not found in BuildingInfo database")
-    return select_geo_object_by_id(session, Building, prediction.answer.building_id)
+    building: Building = select_geo_object_by_id(session, Building, prediction.answer.building_id)
+    # logger.info("Image_url")
+    # logger.info(building.group.image_url)
+    if building.group.image_url is None:
+        building.group.image_url = prediction.answer.image_url
+    return building
 
 
 app.include_router(router)

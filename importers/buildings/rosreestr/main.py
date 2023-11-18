@@ -26,42 +26,36 @@ def update_buildings_table():
             image_url = row.at['r_photo_url']
             year = row.at['r_year_int']
 
-            # if index in [7029, 7030, 7031]:
-            #     print(row)
+            if not MOSCOW_GARDEN_RING.contains(geometry):
+                continue
 
-            if address is not None and "подкопаевский" in address.lower():
-                print(row)
+            building_group = BuildingGroup()
 
-            # if not MOSCOW_GARDEN_RING.contains(geometry):
-            #     continue
-            #
-            # building_group = BuildingGroup()
-            #
-            # if name is not None:
-            #     name_text_content = create_text_content(session=session, RU=name)
-            #     building_group.title_id = name_text_content.id
-            #
-            # if not pd.isna(year):
-            #     building_group.construction_year = int(year)
-            #
-            # prefix = "http://"
-            # if image_url is not None and image_url[:len(prefix)] == prefix:
-            #     building_group.image_url = image_url
-            #
-            # session.add(building_group)
-            # session.flush()
-            #
-            # building = Building(
-            #     group_id=building_group.id
-            # )
-            #
-            # if address is not None:
-            #     address_text_content = create_text_content(session=session, RU=address)
-            #     building.address_id = address_text_content.id
-            #
-            # building.set_geometry_shape(geometry)
-            #
-            # session.add(building)
+            if name is not None:
+                name_text_content = create_text_content(session=session, RU=name)
+                building_group.title_id = name_text_content.id
+
+            if not pd.isna(year):
+                building_group.construction_year = int(year)
+
+            prefix = "http://"
+            if image_url is not None and image_url[:len(prefix)] == prefix:
+                building_group.image_url = image_url
+
+            session.add(building_group)
+            session.flush()
+
+            building = Building(
+                group_id=building_group.id
+            )
+
+            if address is not None:
+                address_text_content = create_text_content(session=session, RU=address)
+                building.address_id = address_text_content.id
+
+            building.set_geometry_shape(geometry)
+
+            session.add(building)
 
         session.commit()
 

@@ -32,12 +32,28 @@
 #
 # concatenated.save("test.jpg")
 #
+from loguru import logger
+
 from google_pano import google_meta_download, google_pano_download
+from miner.worker import s3
+from models.pano import PanoMetaRead
 
 pano_id = "KzCpnCLybCyYweFkD6ucwQ"
 
-meta = google_meta_download(pano_id)
+pano_meta = google_meta_download(pano_id)
 
-pano = google_pano_download(pano_id, meta, 1)
-
-print(pano)
+for pano in pano_meta.panos:
+    img = google_pano_download(pano_meta, pano, 10)
+    logger.info(f"Pano {pano_id} meta downloaded")
+    s3.upload_meta(
+        bucket='place-recognition',
+        key=f'google_pano/{pano_id}/meta.json',
+        json_data=PanoMetaRead.from_orm(pano_meta).json(),
+    )
+    logger.info(f"Pano {pano_id} pano downloaded")
+    s3.upload_pano(
+        bucket='place-recognition',
+        key=f'google_pano/{pano_id}/pano.jpg'.replace('pano.jpg', f'{pano.width}x{pano.height}.jpg'),
+        img=img,
+    )
+    logger.info(f"Pano {pano_id} {pano.width}x{pano.height}.jpg pano uploaded to s3")

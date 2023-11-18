@@ -1,16 +1,12 @@
-import sys
-
-import uvicorn as uvicorn
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-
-import db
-import google_pano
-from models import Pano, PanoType, S3Path, IssueTask
-from s3 import BUCKET
-
 from loguru import logger
+
+import miner.manager.db as db
+import miner.manager.google_pano as google_pano
+from miner.manager.models import Pano, PanoType, S3Path, IssueTask
+from miner.manager.s3 import BUCKET
 
 app = FastAPI()
 
@@ -53,14 +49,14 @@ def finish_task(_: Request, pano_id: str):
     else:
         logger.info(f"Pano {pano_id} was found")
     if pano.type == PanoType.GOOGLE_PANO:
-        # meta_path = get_meta_path(pano)
-        # logger.info(f"Pano {pano_id} meta downloaded")
-        # meta_dict = google_pano.check_meta(meta_path)
-        # if not meta_dict:
-        #     logger.error(f"Pano {pano_id} meta is incorrect")
-        #     return JSONResponse(status_code=404, content="Meta is incorrect")
-        # else:
-        #     logger.info(f"Pano {pano_id} meta ok")
+        meta_path = get_meta_path(pano)
+        logger.info(f"Pano {pano_id} meta downloaded")
+        meta_dict = google_pano.check_meta(meta_path)
+        if not meta_dict:
+            logger.error(f"Pano {pano_id} meta is incorrect")
+            return JSONResponse(status_code=404, content="Meta is incorrect")
+        else:
+            logger.info(f"Pano {pano_id} meta ok")
         # pano_path = get_pano_path(pano)
         # if not google_pano.check_pano(pano_path, meta_dict):
         #     logger.error(f"Pano {pano_id} pano is incorrect")
@@ -79,8 +75,8 @@ def add_pano(_: Request, pano_type: PanoType, pano_id: str):
     if pano_type == PanoType.GOOGLE_PANO:
         if not google_pano.check_pano_id(pano_id):
             return JSONResponse(status_code=404, content="Wrong pano id")
-        else:
-            logger.error(f"Pano id {pano_id} is wrong")
+        # else:
+        #     logger.error(f"Pano id {pano_id} is wrong")
     else:
         logger.error(f"Pano type {pano_type} is wrong")
     db.add_pano(pano_id, pano_type)
@@ -90,3 +86,9 @@ def add_pano(_: Request, pano_type: PanoType, pano_id: str):
 @app.get("/echo", response_class=JSONResponse)
 def add_pano(_: Request):
     return JSONResponse(status_code=200, content="Hello World!")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8080, proxy_headers=True)

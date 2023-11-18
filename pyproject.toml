@@ -12,7 +12,6 @@ fastapi = "^0.104.1"
 SQLAlchemy = "^1.4.41"
 loguru = "^0.7.2"
 uvicorn = { extras = ["standard"], version = "^0.23.2" }
-alembic = "^1.12.0"
 psycopg2-binary = "^2.9.7"
 geoalchemy2 = "^0.14.1"
 shapely = "^2.0.1"
@@ -24,8 +23,12 @@ qdrant-client = "^1.6.3"
 sqlmodel = "^0.0.11"
 #clickhouse-connect = "^0.6.18"
 
+[tool.poetry.group.miner.dependencies]
+boto3 = "^1.28.51"
+
 [tool.poetry.group.dev.dependencies]
 boto3 = "^1.28.51"
+alembic = "^1.12.0"
 geopandas = "^0.14.0"
 opencv-python = "^4.8.1.78"
 matplotlib = "^3.8.0"

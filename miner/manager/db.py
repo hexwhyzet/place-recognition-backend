@@ -1,10 +1,9 @@
 import datetime
 import time
-from os import wait
 from sqlite3 import connect
 from typing import Optional
 
-from models import Pano, PanoType
+from miner.manager.models import Pano, PanoType
 
 DATABASE_PATH = "manager.sqlite"
 
