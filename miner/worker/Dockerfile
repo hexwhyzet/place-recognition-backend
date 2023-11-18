@@ -12,4 +12,4 @@ RUN python -m pip install --no-cache-dir poetry==1.6.1 \
 
 COPY . .
 
-CMD ["python", "-m", "miner.worker.main"]
+ENTRYPOINT ["python", "-m", "miner.worker.main"]
