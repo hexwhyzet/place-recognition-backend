@@ -49,14 +49,14 @@ def finish_task(_: Request, pano_id: str):
     else:
         logger.info(f"Pano {pano_id} was found")
     if pano.type == PanoType.GOOGLE_PANO:
-        meta_path = get_meta_path(pano)
-        logger.info(f"Pano {pano_id} meta downloaded")
-        meta_dict = google_pano.check_meta(meta_path)
-        if not meta_dict:
-            logger.error(f"Pano {pano_id} meta is incorrect")
-            return JSONResponse(status_code=404, content="Meta is incorrect")
-        else:
-            logger.info(f"Pano {pano_id} meta ok")
+        # meta_path = get_meta_path(pano)
+        # logger.info(f"Pano {pano_id} meta downloaded")
+        # meta_dict = google_pano.check_meta(meta_path)
+        # if not meta_dict:
+        #     logger.error(f"Pano {pano_id} meta is incorrect")
+        #     return JSONResponse(status_code=404, content="Meta is incorrect")
+        # else:
+        #     logger.info(f"Pano {pano_id} meta ok")
         # pano_path = get_pano_path(pano)
         # if not google_pano.check_pano(pano_path, meta_dict):
         #     logger.error(f"Pano {pano_id} pano is incorrect")
