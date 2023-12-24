@@ -62,7 +62,7 @@ class PanoMetaBase(SQLModel):
     primary_id: str = Field(nullable=False)
     secondary_id: str = Field(nullable=True, default=None)
     datetime: dt = Field(nullable=False)
-    direction: int = Field(nullable=False)
+    direction: float = Field(nullable=False)
 
 
 class PanoMeta(PanoMetaBase, BaseSQLModel, table=True):

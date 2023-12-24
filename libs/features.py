@@ -1,5 +1,7 @@
+import itertools
+import time
 from copy import deepcopy
-from typing import List, Union
+from typing import List, Union, Iterator
 
 import numpy as np
 import torch
@@ -17,17 +19,15 @@ from services.geo import select_closest_geo_objects_to_point
 class FeatureGenerator:
     name: str = 'default'
 
-    def __call__(self, images: Union[NdarrayImage, List[NdarrayImage]]) -> List[NdarrayImage]:
-        if not isinstance(images, List):
+    def __call__(self, images: Union[NdarrayImage, Iterator[NdarrayImage]]) -> Iterator[NdarrayImage]:
+        if isinstance(images, NdarrayImage):
             images = [images]
-        result_images = []
-        for image in images:
+        for image in self.transform(images):
             image.meta.transformations.append(self.name)
-            result_images.extend(self.transform(image))
-        return result_images
+            yield image
 
-    def transform(self, image: NdarrayImage) -> List[NdarrayImage]:
-        raise image
+    def transform(self, image: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
+        raise Exception("Transform is not implemented")
 
 
 class Cropper(FeatureGenerator):
@@ -39,17 +39,16 @@ class Cropper(FeatureGenerator):
         self.height_stride = height_stride or height
         self.width_stride = width_stride or width
 
-    def transform(self, image: NdarrayImage) -> List[NdarrayImage]:
-        images = []
-        for height_end in range(self.height, image.height + 1, self.height_stride):
-            for width_end in range(self.width, image.width + 1, self.width_stride):
-                width_start = width_end - self.width
-                height_start = height_end - self.height
-                images.append(image.crop(width_start=width_start,
-                                         width_end=width_end,
-                                         height_start=height_start,
-                                         height_end=height_end))
-        return images
+    def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
+        for image in images:
+            for height_end in range(self.height, image.height + 1, self.height_stride):
+                for width_end in range(self.width, image.width + 1, self.width_stride):
+                    width_start = width_end - self.width
+                    height_start = height_end - self.height
+                    yield image.crop(width_start=width_start,
+                                     width_end=width_end,
+                                     height_start=height_start,
+                                     height_end=height_end)
 
 
 class Resizer(FeatureGenerator):
@@ -61,29 +60,38 @@ class Resizer(FeatureGenerator):
         self.width_scale = width_scale
         self.height_scale = height_scale
 
-    def transform(self, image: NdarrayImage) -> List[NdarrayImage]:
-        return [image.resize(width=self.width,
-                             height=self.height,
-                             width_scale=self.width_scale,
-                             height_scale=self.height_scale)]
+    def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
+        for image in images:
+            res = image.resize(width=self.width,
+                               height=self.height,
+                               width_scale=self.width_scale,
+                               height_scale=self.height_scale)
+            yield res
 
 
 class SquareCrop(FeatureGenerator):
     name = 'square_crop'
 
-    def transform(self, image: NdarrayImage) -> List[NdarrayImage]:
-        return [image.square_crop()]
+    def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
+        for image in images:
+            yield image.square_crop()
 
 
 class DescriptorExtractor(FeatureGenerator):
     name = 'descriptor'
 
-    def transform(self, image: NdarrayImage) -> List[NdarrayImage]:
-        image.meta.descriptor = self.descriptor(image)
-        image.meta.descriptor_image = deepcopy(image.image)
-        return [image]
+    def __init__(self, batch_size: int = 1):
+        self.batch_size = batch_size
 
-    def descriptor(self, image: NdarrayImage) -> np.array:
+    def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
+        while batch_images := list(itertools.islice(images, self.batch_size)):
+            descriptors = self.descriptor(iter(batch_images))
+            for image, descriptor in zip(batch_images, descriptors):
+                image.meta.descriptor = descriptor
+                image.meta.descriptor_image = deepcopy(image.image)
+                yield image
+
+    def descriptor(self, images: Iterator[NdarrayImage]) -> np.array:
         raise NotImplementedError
 
     def descriptor_size(self):
@@ -101,13 +109,25 @@ class MixVPR(DescriptorExtractor):
     INPUT_IMAGE_HEIGHT = 320
     INPUT_IMAGE_WIDTH = 320
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.model = mixvpr_interface.get_loaded_model()
 
-    def descriptor(self, image: NdarrayImage) -> np.ndarray:
-        assert image.image.content.shape == (320, 320, 3)
-        tensor = torch.tensor(np.expand_dims(np.moveaxis(image.image.content, [2], [0]), axis=0).astype(np.float32))
-        return self.model(tensor)[0].detach().numpy()
+    def descriptor(self, images: Iterator[NdarrayImage]) -> np.ndarray:
+        # for image in images:
+        #     assert image.image.content.shape == (320, 320, 3)
+        # a = time.time()
+        # print("Started")
+        batch = torch.tensor(
+            np.fromiter((np.moveaxis(image.image.content, [2], [0]) for image in images),
+                        dtype=(np.float32, (3, 320, 320))))
+        # b = time.time()
+        # print(f"Assembled: {b - a}")
+        # print(f"Images: {len(batch)}")
+        res = self.model(batch).detach().numpy()
+        # c = time.time()
+        # print(f"Model: {c - b}")
+        return res
 
     def descriptor_size(self):
         return self.DESCRIPTOR_SIZE
@@ -138,35 +158,32 @@ class PanoGeoCropper(FeatureGenerator):
         self.padding = padding
         self.angle_threshold = angle_threshold
 
-    def transform(self, image: NdarrayImage) -> List[NdarrayImage]:
-        observer_point = image.meta.coordinates.point(CoordinateSystem.PROJECTION)
-        closest_buildings = select_closest_geo_objects_to_point(self.session, Building, observer_point, 50)
-        angles = decompose_angles(closest_buildings, observer_point)
-        equ = Equirectangular(image.image.content)
+    def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
+        for image in images:
+            observer_point = image.meta.coordinates.point(CoordinateSystem.PROJECTION)
+            closest_buildings = select_closest_geo_objects_to_point(self.session, Building, observer_point, 15)
+            angles = decompose_angles(closest_buildings, observer_point)
+            equ = Equirectangular(image.image.content)
+            for start, end, index, avg_distance in angles:
+                if not index:
+                    continue
 
-        result = []
+                if self.filter_buildings_indices and index not in self.filter_buildings_indices:
+                    continue
 
-        for start, end, index, avg_distance in angles:
-            if not index:
-                continue
+                if start > end or end - start < self.angle_threshold:
+                    # TODO process split angle case
+                    continue
 
-            if self.filter_buildings_indices and index not in self.filter_buildings_indices:
-                continue
-
-            if start > end or end - start < self.angle_threshold:
-                # TODO process split angle case
-                continue
-
-            end += self.padding
-            start -= self.padding
-            fov = end - start
-            shift = 360 - image.meta.direction.degree
-            pixels_per_fov_degree = (image.width / 360) / 2
-            # height_k = 45 / avg_distance
-            # height = min(4000, 2000 * height_k)
-            img = equ.GetPerspective(fov, -shift + start - 180 + fov / 2, 10, 2000, pixels_per_fov_degree * fov)
-            result.append(
-                NdarrayImage(
+                end += self.padding
+                start -= self.padding
+                fov = end - start
+                shift = 360 - image.meta.direction.degree
+                pixels_per_fov_degree = (image.width / 360) / 2
+                # height_k = 45 / avg_distance
+                # height = min(4000, 2000 * height_k)
+                img = equ.GetPerspective(fov, -shift + start - 180 + fov / 2, 10, 2000, pixels_per_fov_degree * fov)
+                ndarray_image = NdarrayImage(
                     image=Layer(content=img),
                     meta=image.meta.copy(
                         update={
@@ -176,16 +193,14 @@ class PanoGeoCropper(FeatureGenerator):
                         deep=True
                     )
                 )
-            )
-        return result
+                yield ndarray_image
 
 
 class FeaturePipeline(FeatureGenerator):
-    def __init__(self, feature_generators: List[FeatureGenerator]):
+    def __init__(self, feature_generators: Iterator[FeatureGenerator]):
         self.feature_generators = feature_generators
 
-    def __call__(self, images: Union[NdarrayImage, List[NdarrayImage]]):
-        intermediate_result = []
+    def __call__(self, images: Union[NdarrayImage, Iterator[NdarrayImage]]):
         for feature_generator in self.feature_generators:
-            intermediate_result = feature_generator(images)
-        return intermediate_result
+            for intermediate_result in feature_generator(images):
+                yield intermediate_result

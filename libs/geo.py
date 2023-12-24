@@ -1,4 +1,5 @@
 import math
+import time
 from statistics import mean
 
 import numpy as np
@@ -10,7 +11,7 @@ from libs.utils import rle_encode
 from models import Building
 
 
-def decompose_angles(buildings: Building, observer_point: Point, iterations: int = 3600, ray_length: float = 10000):
+def decompose_angles(buildings: Building, observer_point: Point, iterations: int = 360 * 4, ray_length: float = 10000):
     angle_map = []
     for i in np.linspace((1 / 2) * math.pi, -(3 / 2) * math.pi, iterations) + 2 * math.pi / iterations / 2:
         observer_point_coords = observer_point.coords[0]
@@ -29,9 +30,7 @@ def decompose_angles(buildings: Building, observer_point: Point, iterations: int
             angle_map.append((observer_point, None, 0))
             continue
         angle_map.append(min(points, key=lambda x: x[2]))
-
     encoded_array = rle_encode(list(map(lambda x: x[1], angle_map)))
-
     iteration_angle = 360 / iterations
     last_angle = 0
 

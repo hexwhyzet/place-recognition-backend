@@ -1,4 +1,5 @@
 import argparse
+import sys
 import time
 
 import requests as requests
@@ -47,31 +48,35 @@ def run_task(task_data: dict, threads_num: int):
     return False
 
 
-GLOBAL_IP = requests.get('https://api.ipify.org').content.decode('utf8')
+def main(argv):
+    GLOBAL_IP = requests.get('https://api.ipify.org').content.decode('utf8')
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--manager_ip', type=str, help='Manager ip:port', required=True)
-parser.add_argument('--delay', type=int, help='Delay in seconds between task requests', required=False,
-                    default=SLEEP_SECONDS)
-parser.add_argument('--threads_num', type=int, help='Delay in seconds', required=False, default=5)
-args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--manager_ip', type=str, help='Manager ip:port', required=True)
+    parser.add_argument('--delay', type=int, help='Delay in seconds between task requests', required=False,
+                        default=SLEEP_SECONDS)
+    parser.add_argument('--threads_num', type=int, help='Delay in seconds', required=False, default=5)
+    args = parser.parse_args()
+
+    # with GetSQLModelSession() as session:
+    while True:
+        time.sleep(SLEEP_SECONDS)
+        try:
+            logger.info(f"http://{args.manager_ip}/issue_task/{GLOBAL_IP}")
+            response = requests.get(f"http://{args.manager_ip}/issue_task/{GLOBAL_IP}")
+            logger.info(f"Request to manager {args.manager_ip} was sent")
+            if response.status_code == 200:
+                logger.info(f"Request to manager {args.manager_ip} is successful")
+                response_data = response.json()
+                if run_task(response_data, threads_num=args.threads_num):
+                    pano_id = response_data['pano']['id']
+                    requests.post(f"http://{args.manager_ip}/finish_task/{pano_id}")
+            else:
+                logger.info(
+                    f"Request to manager {args.manager_ip} is unsuccessful: {response.content.decode('utf8')}")
+        except Exception as e:
+            print(e)
 
 
-# with GetSQLModelSession() as session:
-while True:
-    time.sleep(SLEEP_SECONDS)
-    try:
-        logger.info(f"http://{args.manager_ip}/issue_task/{GLOBAL_IP}")
-        response = requests.get(f"http://{args.manager_ip}/issue_task/{GLOBAL_IP}")
-        logger.info(f"Request to manager {args.manager_ip} was sent")
-        if response.status_code == 200:
-            logger.info(f"Request to manager {args.manager_ip} is successful")
-            response_data = response.json()
-            if run_task(response_data, threads_num=args.threads_num):
-                pano_id = response_data['pano']['id']
-                requests.post(f"http://{args.manager_ip}/finish_task/{pano_id}")
-        else:
-            logger.info(
-                f"Request to manager {args.manager_ip} is unsuccessful: {response.content.decode('utf8')}")
-    except Exception as e:
-        print(e)
+if __name__ == '__main__':
+    main(sys.argv)

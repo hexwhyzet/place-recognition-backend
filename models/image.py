@@ -1,4 +1,5 @@
-import datetime
+import datetime as dt
+import time
 from copy import deepcopy
 from enum import Enum
 from io import BytesIO
@@ -37,10 +38,19 @@ class LocalResource(BaseResource):
 
 class S3Resource(BaseResource):
     bucket: str
+    content: Optional[dict] = None
 
     @property
     def url(self):
         return f'https://storage.yandexcloud.net/{self.bucket}/{self.path}'
+
+    def load_content(self):
+        self.content = s3.get_object(self.bucket, self.path)
+
+    def get_content(self):
+        if self.content is None:
+            self.load_content()
+        return self.content
 
 
 class Direction(BaseModel):
@@ -105,13 +115,14 @@ class Layer(BaseModel):
 
 
 class ImageMeta(BaseModel):
+    primary_id: str
     height: int
     width: int
     type: ImageType = ImageType.FLAT
     source: ImageSource = ImageSource.OWN
-    coordinates: Optional[Coordinates] = None
-    direction: Optional[Direction] = None
-    date: Optional[datetime.date] = None
+    coordinates: Coordinates
+    direction: Direction
+    datetime: Optional[dt.datetime] = None
     transformations: list = Field(default_factory=list)
     tags: list = Field(default_factory=list)
     annotations: Layer = None
@@ -129,8 +140,7 @@ class PathImage(BaseModel):
 
     def open(self):
         if isinstance(self.resource, S3Resource):
-            response = s3.get_object(self.resource.bucket, self.resource.path)
-            file_stream = BytesIO(response['Body'].read())
+            file_stream = BytesIO(self.resource.get_content()['Body'].read())
             img = Image.open(file_stream)
         elif isinstance(self.resource, LocalResource):
             img = Image.open(self.resource.path)

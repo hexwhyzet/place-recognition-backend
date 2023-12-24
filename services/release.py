@@ -67,7 +67,7 @@ def upsert_vector_release_item(client: QdrantClient, collection_name: str, vecto
                 id=release_item_id,
                 vector=vector,
                 payload={
-                    "locations": [{"lon": point.x, "lat": point.y}],
+                    "locations": [{"lat": point.x, "lon": point.y}],
                     "building_id": building_id,
                     "image_url": image_url
                 },

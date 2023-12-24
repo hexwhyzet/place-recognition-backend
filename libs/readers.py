@@ -41,24 +41,27 @@ def pano_ids(bucket: str = BUCKET, sources=None):
     result = []
     for prefix in sources:
         objects = list_objects(bucket, prefix)
-        ids = list(set(obj["Key"].removeprefix(f"{prefix}/").split("/")[0] for obj in objects))
+        ids = list(
+            filter(lambda x: x != '', set(obj["Key"].removeprefix(f"{prefix}/").split("/")[0] for obj in objects)))
         result.extend(ids)
     return result
 
 
-def parse_meta(meta: dict, source: ImageSource) -> ImageMeta:
+def parse_meta(meta: dict, source: ImageSource, zoom: int) -> ImageMeta:
+    size = [pano_size for pano_size in meta['panos'] if pano_size['zoom'] == zoom][0]
     return ImageMeta(
+        primary_id=meta['primary_id'],
         type=ImageType.PANO,
         source=source,
-        height=meta['resolution']['height'],
-        width=meta['resolution']['width'],
-        direction=Direction(degree=meta['rotation']),
+        height=size['height'],
+        width=size['width'],
+        direction=Direction(degree=meta['direction']),
         coordinates=Coordinates(
-            latitude=meta['lat'],
-            longitude=meta['lng'],
+            latitude=meta['coordinates']['latitude'],
+            longitude=meta['coordinates']['longitude'],
             system=pano_source_to_coordinate_system[source],
         ),
-        date=datetime.datetime(year=meta['date']['year'], month=meta['date']['month'], day=1),
+        datetime=datetime.datetime.fromisoformat(meta['datetime']),
     )
 
 
@@ -75,14 +78,19 @@ def google_street_view_local(subpath: str = "") -> List[PathImage]:
     return images
 
 
-def path_pano_from_s3(pano_id: str, source: ImageSource, bucket: str = BUCKET) -> PathImage:
+def path_pano_from_s3(pano_id: str, source: ImageSource, zoom: int, bucket: str = BUCKET,
+                      preload_content: bool = False) -> PathImage:
     base = os.path.join(pano_source_to_dir[source].value, pano_id)
     meta_path = os.path.join(base, "meta.json")
-    pano_path = os.path.join(base, "pano.jpg")
     meta_raw = get_json(bucket, meta_path)
+    meta = parse_meta(meta_raw, source, zoom)
+    pano_path = os.path.join(base, f"{meta.width}x{meta.height}.jpg")
+    s3_resource = S3Resource(path=pano_path, bucket=BUCKET)
+    if preload_content:
+        s3_resource.load_content()
     return PathImage(
-        resource=S3Resource(path=pano_path, bucket=BUCKET),
-        meta=parse_meta(meta_raw, source)
+        resource=s3_resource,
+        meta=parse_meta(meta_raw, source, zoom)
     )
 
 

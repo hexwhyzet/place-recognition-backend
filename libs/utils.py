@@ -65,9 +65,15 @@ def pbar_wrapper(pbar, func, *args, **kwargs):
     return result
 
 
-def pool_executor(items, processor_fn, processor_args, tqdm_desc, max_workers):
+def pool_executor(items, processor_fn, processor_args, processor_kwargs, tqdm_desc, max_workers):
     with tqdm(total=len(items), desc=tqdm_desc) as pbar:
         with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            futures = [pool.submit(pbar_wrapper, pbar, processor_fn, item, *processor_args) for item in items]
+            futures = [pool.submit(pbar_wrapper, pbar, processor_fn, item, *processor_args, **processor_kwargs) for item in items]
             results = [future.result() for future in as_completed(futures)]
             return results
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
