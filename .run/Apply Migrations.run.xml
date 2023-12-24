@@ -1,0 +1,24 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Apply Migrations" type="ShConfigurationType">
+    <option name="SCRIPT_TEXT" value=" read input_variable; export MIGRATION_NAME=$input_variable; echo MIGRATION_NAME=$MIGRATION_NAME;" />
+    <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/alembic/scripts/apply_migrations.sh" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+    <option name="INTERPRETER_PATH" value="/bin/zsh" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="EXECUTE_IN_TERMINAL" value="false" />
+    <option name="EXECUTE_SCRIPT_FILE" value="true" />
+    <envs>
+      <env name="DB_DATABASE" value="admin" />
+      <env name="DB_HOST" value="localhost" />
+      <env name="DB_PASSWORD" value="admin" />
+      <env name="DB_PORT" value="5432" />
+      <env name="DB_USER" value="admin" />
+      <env name="POETRY_PATH" value="$USER_HOME$/Library/Caches/pypoetry/virtualenvs/place-recognition-hzjLY0am-py3.9/bin/python3.9" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>
