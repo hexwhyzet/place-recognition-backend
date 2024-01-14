@@ -31,7 +31,6 @@ class RecognizeData(BaseModel):
     coordinates: Optional[Coordinates] = None
     direction: float = None
     release_name: str = None
-    debug_token: str = None
 
 
 class RequestLogRoute(APIRoute):
@@ -97,8 +96,6 @@ def health_routed():
 
 @router.post("/recognize", response_model=BuildingReadWithGroup)
 def recognize(recognize_data: RecognizeData, request: Request):
-    logger.info([recognize_data.coordinates, recognize_data.direction])
-
     session = request.state.buildings_info_db
 
     release_name = recognize_data.release_name or DEFAULT_RELEASE_NAME
@@ -124,7 +121,7 @@ def recognize(recognize_data: RecognizeData, request: Request):
                        coordinates=coordinates,
                        model="MixVPR",
                        predictor=PredictByClosestDescriptor.__name__,
-                       debug_token=recognize_data.debug_token)
+                       debug_token=request.headers.get("x-debug-token"))
 
     if not selected_geo_object_exists(session, Building, prediction.answer.building_id):
         raise Exception("Recognized building was not found in BuildingInfo database")
