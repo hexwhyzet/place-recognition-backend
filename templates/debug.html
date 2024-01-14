@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug</title>
+</head>
+<body>
+<h1>Closes matches</h1>
+<div class="release-items-container"
+         style="display: flex; flex-wrap: wrap; align-content: flex-start;">
+    {% for release_item in release_items %}
+    <div style="margin: 5px; text-align: center; font-size: 1em">
+        <img src="{{ release_item.image_url }}" alt="Image">
+        <p>{{ release_item.building_id }}</p>
+    </div>
+    {% endfor %}
+</div>
+</body>
+</html>
