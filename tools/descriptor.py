@@ -53,5 +53,9 @@ def send_recognize_request(image: NdarrayImage, network_config: NetworkConfig = 
     if release_name is not None:
         data['release_name'] = release_name
 
+    headers = {}
+    if debug_token is not None:
+        headers['x-debug-token'] = debug_token
+
     url = get_url('recognize', network_config)
-    return requests.post(url=url, json=data, headers={'x-debug-token': debug_token})
+    return requests.post(url=url, json=data, headers=headers)
