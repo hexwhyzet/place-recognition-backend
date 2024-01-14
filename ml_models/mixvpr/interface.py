@@ -3,7 +3,7 @@ import torch
 from .model import VPRModel
 
 
-def get_loaded_model():
+def get_loaded_model(device):
     # Note that images must be resized to 320x320
     model = VPRModel(backbone_arch='resnet50',
                      layers_to_crop=[4],
@@ -18,7 +18,7 @@ def get_loaded_model():
                      )
 
     state_dict = torch.load(
-        '/Users/kabakov/PycharmProjects/place-recognition/Research/mixVPR/states/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt',
-        map_location=torch.device('cpu'))
+        'ml_models/mixvpr/states/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt',
+        map_location=torch.device(device))
     model.load_state_dict(state_dict)
     return model

@@ -93,3 +93,4 @@ class Recognition(TableNameSQLMode, table=True):
     )
     model: str = Field(nullable=False)
     predictor: str = Field(nullable=False)
+    debug_token: str = Field(nullable=True)

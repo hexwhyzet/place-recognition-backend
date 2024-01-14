@@ -1,5 +1,4 @@
 import itertools
-import time
 from copy import deepcopy
 from typing import List, Union, Iterator
 
@@ -62,11 +61,10 @@ class Resizer(FeatureGenerator):
 
     def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
         for image in images:
-            res = image.resize(width=self.width,
+            yield image.resize(width=self.width,
                                height=self.height,
                                width_scale=self.width_scale,
                                height_scale=self.height_scale)
-            yield res
 
 
 class SquareCrop(FeatureGenerator):
@@ -80,8 +78,9 @@ class SquareCrop(FeatureGenerator):
 class DescriptorExtractor(FeatureGenerator):
     name = 'descriptor'
 
-    def __init__(self, batch_size: int = 1):
+    def __init__(self, batch_size: int = 1, device: str = 'cpu'):
         self.batch_size = batch_size
+        self.device = device
 
     def transform(self, images: Iterator[NdarrayImage]) -> Iterator[NdarrayImage]:
         while batch_images := list(itertools.islice(images, self.batch_size)):
@@ -111,22 +110,15 @@ class MixVPR(DescriptorExtractor):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.model = mixvpr_interface.get_loaded_model()
+        self.model = mixvpr_interface.get_loaded_model(self.device).to(self.device)
 
     def descriptor(self, images: Iterator[NdarrayImage]) -> np.ndarray:
         # for image in images:
         #     assert image.image.content.shape == (320, 320, 3)
-        # a = time.time()
-        # print("Started")
         batch = torch.tensor(
             np.fromiter((np.moveaxis(image.image.content, [2], [0]) for image in images),
-                        dtype=(np.float32, (3, 320, 320))))
-        # b = time.time()
-        # print(f"Assembled: {b - a}")
-        # print(f"Images: {len(batch)}")
-        res = self.model(batch).detach().numpy()
-        # c = time.time()
-        # print(f"Model: {c - b}")
+                        dtype=(np.float32, (3, 320, 320)))).to(self.device)
+        res = self.model(batch).to("cpu").detach().numpy()
         return res
 
     def descriptor_size(self):

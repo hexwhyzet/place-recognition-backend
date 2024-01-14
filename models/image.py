@@ -146,7 +146,7 @@ class PathImage(BaseModel):
             img = Image.open(self.resource.path)
         else:
             raise Exception("unknown ResourceType value")
-        return NdarrayImage(image=Layer(content=np.array(img)), meta=deepcopy(self.meta))
+        return NdarrayImage(image=Layer(content=np.array(img.convert("RGB"))), meta=deepcopy(self.meta))
 
     def save(self, base_resource: BaseResource):
         pass

@@ -21,7 +21,6 @@ class AreaPathImageFilter(PathImageFilter):
     def filter(self, image: PathImage) -> bool:
         return self.area.contains(image.meta.coordinates.point(CoordinateSystem.PROJECTION))
 
-
 # class BuildingIntersectionFilter(PathImageFilter):
 #     def __init__(self):
 #         self.buildings = get_buildings()

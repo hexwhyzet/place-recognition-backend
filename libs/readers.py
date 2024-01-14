@@ -1,7 +1,6 @@
 import datetime
 import glob
 import json
-import os
 from enum import Enum
 from typing import List
 
@@ -9,7 +8,7 @@ import numpy as np
 
 from libs.coordinates import CoordinateSystem, Coordinates
 from libs.s3 import BUCKET, list_objects, get_json
-from libs.utils import rle2mask
+from libs.utils import rle2mask, path_join
 from models.image import PathImage, Direction, ImageMeta, Layer, ImageSource, S3Resource, ImageType
 
 
@@ -66,12 +65,12 @@ def parse_meta(meta: dict, source: ImageSource, zoom: int) -> ImageMeta:
 
 
 def google_street_view_local(subpath: str = "") -> List[PathImage]:
-    base_path = os.path.join('/Users/kabakov/PycharmProjects/place-recognition/Research/Server/images/google', subpath)
+    base_path = path_join('/Users/kabakov/PycharmProjects/place-recognition/Research/Server/images/google', subpath)
     images = []
-    for raw_meta_path in glob.glob(os.path.join(base_path, "*.json")):
+    for raw_meta_path in glob.glob(path_join(base_path, "*.json")):
         raw_meta = json.loads(open(raw_meta_path, 'r').read())
         image = PathImage(
-            path=os.path.join(base_path, raw_meta['filename']),
+            path=path_join(base_path, raw_meta['filename']),
             meta=parse_meta(raw_meta, ImageSource.GOOGLE)
         )
         images.append(image)
@@ -80,11 +79,11 @@ def google_street_view_local(subpath: str = "") -> List[PathImage]:
 
 def path_pano_from_s3(pano_id: str, source: ImageSource, zoom: int, bucket: str = BUCKET,
                       preload_content: bool = False) -> PathImage:
-    base = os.path.join(pano_source_to_dir[source].value, pano_id)
-    meta_path = os.path.join(base, "meta.json")
+    base = path_join(pano_source_to_dir[source].value, pano_id)
+    meta_path = path_join(base, "meta.json")
     meta_raw = get_json(bucket, meta_path)
     meta = parse_meta(meta_raw, source, zoom)
-    pano_path = os.path.join(base, f"{meta.width}x{meta.height}.jpg")
+    pano_path = path_join(base, f"{meta.width}x{meta.height}.jpg")
     s3_resource = S3Resource(path=pano_path, bucket=BUCKET)
     if preload_content:
         s3_resource.load_content()
@@ -95,9 +94,9 @@ def path_pano_from_s3(pano_id: str, source: ImageSource, zoom: int, bucket: str 
 
 
 def read_coco_dataset(path):
-    annotations_path = os.path.join(path, "annotations/instances_default.json")
+    annotations_path = path_join(path, "annotations/instances_default.json")
     coco_annotations = json.loads(open(annotations_path, "r").read())
-    images_path = os.path.join(path, "images")
+    images_path = path_join(path, "images")
     images = coco_annotations["images"]
     categories = coco_annotations["categories"]
     annotations = coco_annotations["annotations"]
@@ -119,7 +118,7 @@ def read_coco_dataset(path):
             mask = rle2mask(rle, (width, height))
             res_annotation[mask] = real_id_by_category_id[annotation["category_id"]]
         path_image = PathImage(
-            path=os.path.join(images_path, image["file_name"]),
+            path=path_join(images_path, image["file_name"]),
             meta=ImageMeta(
                 type='flat',
                 height=height,

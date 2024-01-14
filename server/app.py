@@ -5,6 +5,7 @@ from typing import List, Optional, Callable
 from fastapi import FastAPI, HTTPException, status, Request, Response, APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
+from fastapi.templating import Jinja2Templates
 from loguru import logger
 from pydantic import BaseModel
 
@@ -13,23 +14,24 @@ from db.qdrant import GetQdrantClient
 from libs.coordinates import Coordinates, CoordinateSystem
 from libs.predictors import PredictByClosestDescriptor
 from models.geo import BuildingReadWithGroup, Building
-from models.logs import HTTPMethod
+from models.logs import HTTPMethod, Recognition
 from services.geo import select_geo_object_by_id, selected_geo_object_exists
-from services.logs import create_request, create_recognition
+from services.logs import create_request, create_recognition, last_recognition
 from services.release import release_exists
 
 IP = "0.0.0.0"
 PORT = 8080
 
 QDRANT_CLIENT = GetQdrantClient()
-RELEASE_COLLECTION_NAME = "determined_montalcini"
-PREDICTOR = PredictByClosestDescriptor(qdrant_client=QDRANT_CLIENT, release_name=RELEASE_COLLECTION_NAME)
+DEFAULT_RELEASE_NAME = "beautiful_morse"
 
 
 class RecognizeData(BaseModel):
     descriptor: List[float]
     coordinates: Optional[Coordinates] = None
     direction: float = None
+    release_name: str = None
+    debug_token: str = None
 
 
 class RequestLogRoute(APIRoute):
@@ -80,6 +82,7 @@ app = FastAPI()
 router = APIRouter(
     route_class=RequestLogRoute,
 )
+templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
@@ -97,36 +100,51 @@ def recognize(recognize_data: RecognizeData, request: Request):
     logger.info([recognize_data.coordinates, recognize_data.direction])
 
     session = request.state.buildings_info_db
-    if not release_exists(session, RELEASE_COLLECTION_NAME):
-        raise HTTPException(status_code=404, detail=f'Release "{RELEASE_COLLECTION_NAME}" does not exists')
+
+    release_name = recognize_data.release_name or DEFAULT_RELEASE_NAME
+
+    if not release_exists(session, release_name):
+        raise HTTPException(status_code=404, detail=f'Release "{release_name}" does not exists')
+
+    predictor = PredictByClosestDescriptor(qdrant_client=QDRANT_CLIENT, release_name=release_name)
+
     coordinates = None if recognize_data.coordinates is None else recognize_data.coordinates.point(
         CoordinateSystem.ELLIPSOID)
-    # a = time.time_ns()
-    prediction = PREDICTOR.predict(session, recognize_data.descriptor)
-    # b = time.time_ns()
-    # logger.info(f"Predictor time a->b {(b - a) / 1e6}")
+    prediction = predictor.predict(session, recognize_data.descriptor)
+
     create_recognition(session=session,
                        request_id=uuid.UUID(hex=request.headers.get("x-request-id")),
                        timestamp=int(time.time()),
                        result_building_id=prediction.answer.building_id,
                        release_items=prediction.closest,
                        closest_size=len(prediction.closest),
-                       release_name=PREDICTOR.release_name,
+                       release_name=predictor.release_name,
                        descriptor=recognize_data.descriptor,
                        descriptor_size=4096,
                        coordinates=coordinates,
                        model="MixVPR",
-                       predictor=PredictByClosestDescriptor.__name__)
-    # c = time.time_ns()
-    # logger.info(f"Predictor time b->c {(c - b) / 1e6}")
+                       predictor=PredictByClosestDescriptor.__name__,
+                       debug_token=recognize_data.debug_token)
+
     if not selected_geo_object_exists(session, Building, prediction.answer.building_id):
         raise Exception("Recognized building was not found in BuildingInfo database")
     building: Building = select_geo_object_by_id(session, Building, prediction.answer.building_id)
-    # logger.info("Image_url")
-    # logger.info(building.group.image_url)
+
     if building.group.image_url is None:
         building.group.image_url = prediction.answer.image_url
     return building
+
+
+@router.get("/debug/{debug_token}", response_model=BuildingReadWithGroup)
+def debug(debug_token: str, request: Request):
+    recognition = last_recognition(session=request.state.buildings_info_db, debug_token=debug_token)
+    if not recognition:
+        raise HTTPException(status_code=404, detail="Debug token not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="debug.html",
+        context={"release_items": recognition.release_items},
+    )
 
 
 app.include_router(router)

@@ -14,7 +14,7 @@ def update_metro_tables():
     if not os.path.exists(METRO_DATA_PATH):
         raise "Metro data JSON file does not exists"
 
-    with open("resources/metro/data.json", "r") as input_file:
+    with open("resources/metro/data.json", "r", encoding="utf8") as input_file:
         data = json.loads(input_file.read())
 
     with GetSQLModelSession() as session:

@@ -33,5 +33,5 @@ class ReleaseItem(BaseSQLModel, table=True):
             nullable=False,
         ),
     )
-    recognitions: List["Recognition"] = Relationship(back_populates="release_items",
+    recognitions: List['Recognition'] = Relationship(back_populates="release_items",
                                                      link_model=RecognitionReleaseItemLink)

@@ -1,6 +1,7 @@
+import os
 import random
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from uuid import uuid4
 
 import numpy as np
@@ -67,9 +68,18 @@ def pbar_wrapper(pbar, func, *args, **kwargs):
 
 def pool_executor(items, processor_fn, processor_args, processor_kwargs, tqdm_desc, max_workers):
     with tqdm(total=len(items), desc=tqdm_desc) as pbar:
-        with ThreadPoolExecutor(max_workers=max_workers) as pool:
-            futures = [pool.submit(pbar_wrapper, pbar, processor_fn, item, *processor_args, **processor_kwargs) for item in items]
-            results = [future.result() for future in as_completed(futures)]
+        with ProcessPoolExecutor(max_workers=max_workers) as pool:
+            futures = []
+
+            for item in items:
+                future = pool.submit(processor_fn, item, *processor_args, **processor_kwargs)
+                future.add_done_callback(lambda p: pbar.update())
+                futures.append(future)
+
+            results = []
+            for future in futures:
+                result = future.result()
+                results.append(result)
             return results
 
 
@@ -77,3 +87,7 @@ def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
+
+def path_join(path, *parts):
+    return os.path.join(path, *parts).replace('\\', '/')  # Windows workaround

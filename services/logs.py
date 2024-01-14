@@ -3,7 +3,7 @@ from typing import List, Union
 
 from geoalchemy2.shape import from_shape
 from shapely import Point
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from models import ReleaseItem
 from models.link import RecognitionReleaseItemLink
@@ -51,12 +51,12 @@ def create_recognition(session: Session,
                        descriptor_size: int,
                        coordinates: Union[Point, None],
                        model: str,
-                       predictor: str):
+                       predictor: str,
+                       debug_token: str):
     recognition = Recognition(
         request_id=request_id,
         timestamp=timestamp,
         result_building_id=result_building_id,
-        # release_items=release_items,
         closest_size=closest_size,
         release_name=release_name,
         descriptor=descriptor,
@@ -64,6 +64,7 @@ def create_recognition(session: Session,
         coordinates=from_shape(coordinates) if coordinates is not None else None,
         model=model,
         predictor=predictor,
+        debug_token=debug_token,
     )
     session.add(recognition)
     session.flush()
@@ -76,3 +77,8 @@ def create_recognition(session: Session,
         )
         session.add(link)
     session.commit()
+
+
+def last_recognition(session: Session, debug_token: str) -> Recognition:
+    query = select(Recognition).where(Recognition.debug_token == debug_token).order_by(Recognition.id.desc())
+    return session.exec(query).first()
