@@ -145,7 +145,8 @@ def debug(debug_token: str, request: Request):
             "recognition": recognition,
             "release_items": recognition.release_items,
             "moscow_timezone": datetime.timezone(offset=datetime.timedelta(hours=3), name="Moscow"),
-            "date_format": '%Y-%m-%d, %H:%M:%S'
+            "date_format": '%Y-%m-%d, %H:%M:%S',
+            "descriptor": "[" + ", ".join(list(map(lambda x: "{:.6f}".format(x), recognition.descriptor[:5]))) + ", ...]"
         },
     )
 

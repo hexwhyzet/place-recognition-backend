@@ -8,6 +8,7 @@
     <h1 style="font-size: 3em; margin: 0;">Recognition</h1>
     <ul style="font-size: 1.3em;">
         <li>Request id: {{ recognition.request_id }}</li>
+        <li>Descriptor 1x{{ recognition.descriptor_size }}: {{ descriptor }}</li>
         <li>Timestamp: {{ recognition.timestamp.strftime(date_format) }} (MOSCOW: {{
             recognition.timestamp.astimezone(moscow_timezone).strftime(date_format) }})
         </li>
