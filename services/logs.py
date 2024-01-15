@@ -82,3 +82,7 @@ def create_recognition(session: Session,
 def last_recognition(session: Session, debug_token: str) -> Recognition:
     query = select(Recognition).where(Recognition.debug_token == debug_token).order_by(Recognition.id.desc())
     return session.exec(query).first()
+
+
+def get_request(session: Session, request_id):
+    return session.get(Request, request_id)
