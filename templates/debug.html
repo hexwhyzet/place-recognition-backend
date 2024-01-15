@@ -14,6 +14,7 @@
         </li>
         <li>Release name: {{ recognition.release_name }}</li>
         <li>Debug token: {{ recognition.debug_token }}</li>
+        <li>Response time: {{ "{:.2f}".format(recognition_request.response_time) }} ms</li>
         <li>Result building id: <b>{{ recognition.result_building_id }}</b></li>
     </ul>
     <h2 style="font-size: 2em">Closes matches</h2>

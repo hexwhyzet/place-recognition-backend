@@ -15,9 +15,9 @@ from db.qdrant import GetQdrantClient
 from libs.coordinates import Coordinates, CoordinateSystem
 from libs.predictors import PredictByClosestDescriptor
 from models.geo import BuildingReadWithGroup, Building
-from models.logs import HTTPMethod, Recognition
+from models.logs import HTTPMethod
 from services.geo import select_geo_object_by_id, selected_geo_object_exists
-from services.logs import create_request, create_recognition, last_recognition
+from services.logs import create_request, create_recognition, last_recognition, get_request
 from services.release import release_exists
 
 IP = "0.0.0.0"
@@ -135,18 +135,22 @@ def recognize(recognize_data: RecognizeData, request: Request):
 
 @router.get("/debug/{debug_token}", response_model=BuildingReadWithGroup)
 def debug(debug_token: str, request: Request):
+    session = request.state.buildings_info_db
     recognition = last_recognition(session=request.state.buildings_info_db, debug_token=debug_token)
     if not recognition:
         raise HTTPException(status_code=404, detail="Debug token not found")
+    recognition_request = get_request(session, recognition.request_id)
     return templates.TemplateResponse(
         request=request,
         name="debug.html",
         context={
             "recognition": recognition,
+            "recognition_request": recognition_request,
             "release_items": recognition.release_items,
             "moscow_timezone": datetime.timezone(offset=datetime.timedelta(hours=3), name="Moscow"),
             "date_format": '%Y-%m-%d, %H:%M:%S',
-            "descriptor": "[" + ", ".join(list(map(lambda x: "{:.6f}".format(x), recognition.descriptor[:5]))) + ", ...]"
+            "descriptor": "[" + ", ".join(
+                list(map(lambda x: "{:.6f}".format(x), recognition.descriptor[:5]))) + ", ...]"
         },
     )
 
