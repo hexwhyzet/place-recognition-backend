@@ -1,3 +1,4 @@
+import datetime
 import time
 import uuid
 from typing import List, Optional, Callable
@@ -140,7 +141,12 @@ def debug(debug_token: str, request: Request):
     return templates.TemplateResponse(
         request=request,
         name="debug.html",
-        context={"release_items": recognition.release_items},
+        context={
+            "recognition": recognition,
+            "release_items": recognition.release_items,
+            "moscow_timezone": datetime.timezone(offset=datetime.timedelta(hours=3), name="Moscow"),
+            "date_format": '%Y-%m-%d, %H:%M:%S'
+        },
     )
 
 
