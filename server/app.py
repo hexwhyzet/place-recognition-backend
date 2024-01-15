@@ -24,7 +24,7 @@ IP = "0.0.0.0"
 PORT = 8080
 
 QDRANT_CLIENT = GetQdrantClient()
-DEFAULT_RELEASE_NAME = "beautiful_morse"
+DEFAULT_RELEASE_NAME = "sharp_hofstadter"
 
 
 class RecognizeData(BaseModel):
