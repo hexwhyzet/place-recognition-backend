@@ -5,6 +5,7 @@ on:
     paths:
       - 'miner/**'
       - 'configs/miner/**'
+      - '.github/workflows/miner.yml'
     branches:
       - 'master'
   pull_request:
