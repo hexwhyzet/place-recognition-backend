@@ -12,7 +12,7 @@ instance_template:
       preserve_after_instance_delete: false
       type_id: network-hdd
       size: 30g
-      image_id: fd8m5bal0bi9j3z4j87v
+      image_id: fd8vq2agp2bltpk94ule
   network_interface_specs:
     - network_id: enpnjes8b8rmi1q347mj
       subnet_ids:
