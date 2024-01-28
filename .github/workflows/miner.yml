@@ -45,6 +45,6 @@ jobs:
       with:
         yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
         folder-id: b1g6d9jrqmedvatmdu88
-        ig-spec-path: 'configs/miner/spec.yml'
-        user-data-path: 'configs/miner/user-data.yml'
-        docker-compose-path: 'docker-compose-miner.yml'
+        ig-spec-path: './configs/miner/spec.yml'
+        user-data-path: './configs/miner/user-data.yml'
+        docker-compose-path: './docker-compose-miner.yml'
