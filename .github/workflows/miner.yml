@@ -31,9 +31,8 @@ jobs:
         CR_REGISTRY: crpktc7jeim3h82e69hv
         CR_REPOSITORY: place-recognition-mining-worker
         IMAGE_TAG: ${{ github.sha }}
-      run: |
-        cat pyproject.toml |
-        docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG -f ./miner/Dockerfile . |
+      run:
+        docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG -f ./miner/Dockerfile .
         docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
 
     - name: Deploy COI Instance Group
