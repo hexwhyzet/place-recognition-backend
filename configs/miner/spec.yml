@@ -1,11 +1,56 @@
-# name: 'place-recognition-miner-worker'
-
-scale_policy:
-  auto_scale:
-    max_size: '4'
-
-deletion_protection: false
-
+#folder_id: b1gken0eihqn********
+name: place-recognition-miner-worker-ig
 instance_template:
-  metadata:
-
+  platform_id: standard-v3
+  resources_spec:
+    memory: 2g
+    cores: 2
+    core_fraction: 20
+  boot_disk_spec:
+    mode: READ_WRITE
+    disk_spec:
+      type_id: network-hdd
+      size: 30g
+#      image_id: fd8m5bal0bi9********
+  network_interface_specs:
+    - network_id: enpnjes8b8rmi1q347mj
+      subnet_ids:
+        - fl8alidc071l3bqaq33r
+      primary_v4_address_spec:
+        one_to_one_nat_spec:
+          ip_version: IPV4
+  network_settings:
+    type: STANDARD
+  scheduling_policy: { }
+#  placement_policy:
+#    placement_group_id: rmppvhrgm77g********
+scale_policy:
+  fixed_scale:
+    size: 3
+#  auto_scale:
+#    min_zone_size: 0
+#    max_size: 3
+#    measurement_duration: 60s
+#    warmup_duration: 0s
+#    stabilization_duration: 300s
+#    initial_size: 1
+#    auto_scale_type: REGIONAL
+#    custom_rules:
+#      - rule_type: WORKLOAD
+#        metric_type: GAUGE
+#        metric_name: queue.messages.stored_count
+#        labels:
+#          queue: queue-autoscale-queue
+#        target: 5
+#        service: message-queue
+deploy_policy:
+#  max_unavailable: 0
+  startup_duration: 0s
+  strategy: PROACTIVE
+  minimal_action: RESTART
+auto_healing_policy:
+  auto_healing_action: RESTART
+allocation_policy:
+  zones:
+    - zone_id: ru-central1-d
+service_account_id: aje7a2ro2i915jumi66k
