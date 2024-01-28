@@ -24,6 +24,7 @@ jobs:
         yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
 
     - name: Build, tag, and push image to Yandex Cloud Container Registry
+      uses: actions/checkout@v4
       env:
         CR_REGISTRY: crpktc7jeim3h82e69hv
         CR_REPOSITORY: place-recognition-mining-worker
