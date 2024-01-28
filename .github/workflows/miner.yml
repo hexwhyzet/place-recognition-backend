@@ -1,0 +1,46 @@
+name: miner-build-deploy
+
+on:
+  push:
+    paths:
+      - 'miner/**'
+      - 'configs/miner/**'
+    branches:
+      - 'master'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  trigger-job:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Login to Yandex Cloud Container Registry
+      id: login-cr
+      uses: yc-actions/yc-cr-login@v1
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+
+    - name: Build, tag, and push image to Yandex Cloud Container Registry
+      env:
+        CR_REGISTRY: crpktc7jeim3h82e69hv
+        CR_REPOSITORY: place-recognition-mining-worker
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG .
+        docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
+
+    - name: Deploy COI Instance Group
+      id: deploy-coi
+      uses: yc-actions/yc-coi-deploy-ig@v1
+      env:
+        CR_REGISTRY: crpktc7jeim3h82e69hv
+        CR_REPOSITORY: place-recognition-mining-worker
+        IMAGE_TAG: ${{ github.sha }}
+      with:
+        yc-sa-json-credentials: ${{ secrets.YC_SA_JSON_CREDENTIALS }}
+        folder-id: b1g6d9jrqmedvatmdu88
+        ig-spec-path: 'configs/miner/spec.yaml'
+        user-data-path: 'configs/miner/user-data.yaml'
+        docker-compose-path: 'docker-compose-miner.yaml'
