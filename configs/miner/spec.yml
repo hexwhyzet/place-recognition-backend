@@ -5,3 +5,7 @@ scale_policy:
     max_size: '4'
 
 deletion_protection: false
+
+instance_template:
+  metadata:
+
