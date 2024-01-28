@@ -14,3 +14,5 @@ resources/buildings/rosreestr/moscow.gpkg
 /tmp
 
 configs/secrets
+
+alembic/versions
