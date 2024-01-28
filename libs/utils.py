@@ -1,7 +1,9 @@
 import os
 import random
 import re
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+import time
+from typing import List, Callable
 from uuid import uuid4
 
 import numpy as np
@@ -66,13 +68,39 @@ def pbar_wrapper(pbar, func, *args, **kwargs):
     return result
 
 
-def pool_executor(items, processor_fn, processor_args, processor_kwargs, tqdm_desc, max_workers):
+class Delayed:
+    def __init__(self, func: Callable, delay: float):
+        self.func = func
+        self.delay = delay
+
+    def __call__(self, *args, **kwargs):
+        if self.delay:
+            time.sleep(self.delay)
+        return self.func(*args, **kwargs)
+
+
+def pool_executor(items, processor_fn: Callable, max_workers: int, executor_type: str, processor_args: List = None,
+                  processor_kwargs: dict = None, tqdm_desc: str = None, delay: float = 0):
+    if executor_type not in ["process", "thread"]:
+        raise Exception(f"Wrong executor type: '{executor_type}'")
+
+    if processor_args is None:
+        processor_args = list()
+
+    if processor_kwargs is None:
+        processor_kwargs = dict()
+
+    if tqdm_desc is None:
+        tqdm_desc = "Default description"
+
+    executor = ProcessPoolExecutor if executor_type == "process" else ThreadPoolExecutor
+
     with tqdm(total=len(items), desc=tqdm_desc) as pbar:
-        with ProcessPoolExecutor(max_workers=max_workers) as pool:
+        with executor(max_workers=max_workers) as pool:
             futures = []
 
             for item in items:
-                future = pool.submit(processor_fn, item, *processor_args, **processor_kwargs)
+                future = pool.submit(Delayed(processor_fn, delay), item, *processor_args, **processor_kwargs)
                 future.add_done_callback(lambda p: pbar.update())
                 futures.append(future)
 

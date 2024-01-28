@@ -3,7 +3,12 @@ import json
 import os
 
 import boto3
-from PIL import Image
+from PIL import Image as PilImage
+
+vipsbin = r'C:\Users\hexwh\Programming\libs\vips-dev-8.15\bin'
+os.environ['PATH'] = os.pathsep.join((vipsbin, os.environ['PATH']))
+
+from pyvips import Image as PyvipsImage
 
 BUCKET = 'place-recognition'
 DEBUG_BUCKET = 'place-recognition-debug'
@@ -39,11 +44,24 @@ def get_json(bucket: str, key: str) -> dict:
     return json.loads(s3_client.get_object(Bucket=bucket, Key=key)['Body'].read())
 
 
-def upload_image(bucket: str, key: str, img: Image, extension: str):
+def upload_pil_image(bucket: str, key: str, img: PilImage, extension: str):
     buffer = io.BytesIO()
     img.save(buffer, extension)
     buffer.seek(0)
     return put_object(bucket, key, buffer)
+
+
+def upload_pyvips_image(bucket: str, key: str, img: PyvipsImage, extension: str):
+    buffer = img.write_to_buffer(f'.{extension}', Q=100)
+    return put_object(bucket, key, buffer)
+
+
+def upload_dict_as_json(bucket: str, key: str, dict_data: dict):
+    return upload_json(bucket, key, json.dumps(dict_data))
+
+
+def upload_json(bucket: str, key: str, json_data: str):
+    return put_object(bucket, key, bytes(json_data.encode("utf-8")))
 
 
 if __name__ == '__main__':

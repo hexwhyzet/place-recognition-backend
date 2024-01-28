@@ -78,6 +78,7 @@ class Releaser:
                     processor_kwargs={"preload_content": False},
                     tqdm_desc="Downloading panos",
                     max_workers=10,
+                    executor_type="thread",
                 )
 
                 area_filter = AreaPathImageFilter(self.config.area)
@@ -95,6 +96,7 @@ class Releaser:
                         processor_kwargs=dict(),
                         tqdm_desc="Releasing panos",
                         max_workers=8,
+                        executor_type="process",
                     )
                 else:
                     raise Exception("Distributed generation is not implemented yet")

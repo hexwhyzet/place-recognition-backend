@@ -1,26 +1,11 @@
 version: '3'
-services:
-  manager:
-    build:
-      context: ./
-      dockerfile: miner/manager/Dockerfile
-#      args:
-#        AWS_SERVER_PUBLIC_KEY: ${AWS_SERVER_PUBLIC_KEY}
-#        AWS_SERVER_SECRET_KEY: ${AWS_SERVER_SECRET_KEY}
-    environment:
-      AWS_SERVER_PUBLIC_KEY: ${AWS_SERVER_PUBLIC_KEY}
-      AWS_SERVER_SECRET_KEY: ${AWS_SERVER_SECRET_KEY}
-    ports:
-      - "8080:8080"
 
+services:
   worker:
+    container_name: 'worker'
     build:
       context: ./
-      dockerfile: miner/worker/Dockerfile
-#      args:
-#        AWS_SERVER_PUBLIC_KEY: ${AWS_SERVER_PUBLIC_KEY}
-#        AWS_SERVER_SECRET_KEY: ${AWS_SERVER_SECRET_KEY}
+      dockerfile: miner/Dockerfile
     environment:
       AWS_SERVER_PUBLIC_KEY: ${AWS_SERVER_PUBLIC_KEY}
       AWS_SERVER_SECRET_KEY: ${AWS_SERVER_SECRET_KEY}
-    command: [ "python", "-m", "miner.worker.main", "--manager_ip", "host.docker.internal:8080" ]

@@ -1,6 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import Column, BigInteger
+from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.orm import declared_attr
 from sqlmodel import SQLModel, Field
 
@@ -15,3 +16,9 @@ class TableNameSQLMode(SQLModel):
 
 class BaseSQLModel(TableNameSQLMode):
     id: Optional[int] = Field(sa_column=Column(BigInteger, primary_key=True))
+
+
+class BaseSQLEnum(SQLAlchemyEnum):
+    def __init__(self, *args, **kwargs):
+        kwargs['values_callable'] = lambda obj: [e.name.lower() for e in obj]
+        super().__init__(*args, **kwargs)

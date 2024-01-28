@@ -3,13 +3,19 @@ from enum import Enum as PythonEnum
 from typing import Optional, List, Any
 
 from geoalchemy2 import Geometry
-from geoalchemy2.shape import to_shape
-from pydantic.fields import ModelField
-from sqlalchemy import Column, Enum as SQLAlchemyEnum, UniqueConstraint
+from sqlalchemy import Column, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-from libs.coordinates import Coordinates, CoordinateSystem, MAIN_COORDINATE_SYSTEM
-from models.base import BaseSQLModel
+from models.base import BaseSQLModel, BaseSQLEnum
+from models.common import CoordinatesSerializable
+
+
+class Pano(BaseSQLModel, table=True):
+    meta_id: Optional[int] = Field(foreign_key="pano_meta.id", nullable=False)
+    meta: "PanoMeta" = Relationship(back_populates="pano")
+
+    spec_id: Optional[int] = Field(foreign_key="pano_spec.id", nullable=True, default=None)
+    spec: Optional["PanoSpec"] = Relationship(back_populates="pano")
 
 
 class PanoSource(PythonEnum):
@@ -17,69 +23,71 @@ class PanoSource(PythonEnum):
     YANDEX = 2
 
 
-class WKBElementSerializable:
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, val, field: ModelField):
-        point = to_shape(val)
-        latitude, longitude = Coordinates.convert(
-            point.x, point.y,
-            from_system=MAIN_COORDINATE_SYSTEM,
-            to_system=CoordinateSystem.ELLIPSOID)
-        return {'latitude': latitude, 'longitude': longitude}
-
-
-class PanoBase(SQLModel):
-    width: int = Field(nullable=False)
-    height: int = Field(nullable=False)
-    zoom: int = Field(nullable=True)
-
-
-class Pano(PanoBase, BaseSQLModel, table=True):
-    pano_meta_id: Optional[int] = Field(
-        foreign_key="pano_meta.id",
-        nullable=False,
-    )
-    pano_meta: "PanoMeta" = Relationship(
-        back_populates="panos"
-    )
-
-
-class PanoRead(PanoBase):
-    pass
-
-
 class PanoMetaBase(SQLModel):
+    __table_args__ = (
+        UniqueConstraint("source_image_id", "source", name="unique_pano_id_for_source"),
+    )
+    source_image_id: str = Field(nullable=False)
+    source_pano_id: str = Field(nullable=True, default=None)
     source: PanoSource = Field(
         sa_column=Column(
-            SQLAlchemyEnum(PanoSource),
+            BaseSQLEnum(PanoSource),
             nullable=False,
         )
     )
-    primary_id: str = Field(nullable=False)
-    secondary_id: str = Field(nullable=True, default=None)
-    datetime: dt = Field(nullable=False)
-    direction: float = Field(nullable=False)
 
 
 class PanoMeta(PanoMetaBase, BaseSQLModel, table=True):
-    __table_args__ = (
-        UniqueConstraint("source", "primary_id", name="unique_pano_id_for_source"),
+    pano: Pano = Relationship(
+        sa_relationship_kwargs={'uselist': False},
+        back_populates="meta",
     )
+
+
+class PanoMetaRead(PanoMetaBase):
+    pass
+
+
+class PanoSizeBase(SQLModel):
+    zoom: int = Field(nullable=False)
+    width: int = Field(nullable=False)
+    height: int = Field(nullable=False)
+
+
+class PanoSize(PanoSizeBase, BaseSQLModel, table=True):
+    pano_spec_id: Optional[int] = Field(
+        foreign_key="pano_spec.id",
+        nullable=False,
+    )
+    pano_spec: "PanoSpec" = Relationship(
+        sa_relationship_kwargs={'uselist': False},
+        back_populates="sizes"
+    )
+
+
+class PanoSizeRead(PanoSizeBase):
+    pass
+
+
+class PanoSpecBase(SQLModel):
+    datetime: dt = Field(nullable=True)
+    direction: float = Field(nullable=False)
+    copyright: str = Field(nullable=False)
+
+
+class PanoSpec(PanoSpecBase, BaseSQLModel, table=True):
     coordinates: Any = Field(
         sa_column=Column(
             Geometry('POINT'),
             nullable=False,
         )
     )
-    panos: List["Pano"] = Relationship(
-        back_populates="pano_meta",
+    sizes: List["PanoSize"] = Relationship(
+        back_populates="pano_spec",
     )
+    pano: Pano = Relationship(back_populates="spec")
 
 
-class PanoMetaRead(PanoMetaBase):
-    coordinates: WKBElementSerializable = None
-    panos: List["PanoRead"] = None
+class PanoSpecRead(PanoMetaBase):
+    coordinates: CoordinatesSerializable = None
+    panos: List["PanoSizeRead"] = None

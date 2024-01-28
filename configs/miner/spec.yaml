@@ -1,0 +1,7 @@
+# name: 'place-recognition-miner-worker'
+
+scale_policy:
+  auto_scale:
+    max_size: '4'
+
+deletion_protection: false

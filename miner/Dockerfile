@@ -12,4 +12,4 @@ RUN python -m pip install --no-cache-dir poetry==1.6.1 \
 
 COPY . .
 
-CMD ["python", "-m", "uvicorn", "miner.manager.main:app", "--host", "0.0.0.0", "--port", "8080"]
+ENTRYPOINT ["python", "-m", "miner.main"]

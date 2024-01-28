@@ -5,67 +5,33 @@ services:
     build:
       dockerfile: db/postgres.Dockerfile
     restart: unless-stopped
-#    healthcheck:
-#      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}'" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}'" ]
+      interval: 5s
     ports:
       - "5432:5432"
     volumes:
       - "./data/postgres:/var/lib/postgresql/data"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DATABASE: admin
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4:7.8
-    restart: unless-stopped
-    ports:
-      - "5050:5050"
-    volumes:
-      - "./data/pgadmin:/var/lib/pgadmin"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: root
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
-      PGADMIN_LISTEN_PORT: 5050
-    depends_on:
-      - postgresql
-#  clickhouse:
-#    container_name: clickhouse
-#    build:
-#      dockerfile: db/clickhouse.Dockerfile
-#    healthcheck:
-#      test: wget --no-verbose --tries=1 --spider http://clickhouse:8123/ping || exit 1
-#      interval: 5s
-#    user: "101:101"
-#    hostname: clickhouse
-#    volumes:
-#      - "./data/clickhouse/:/var/lib/clickhouse/"
-#      - "./data/clickhouse/:/var/log/clickhouse-server/"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+#  pgadmin:
+#    container_name: pgadmin
+#    image: dpage/pgadmin4:7.8
+#    restart: unless-stopped
 #    ports:
-#      - "8123:8123"
-#      - "9000:9000"
-#  grafana:
-#    container_name: grafana
-#    build:
-#      dockerfile: logging/grafana.Dockerfile
-#    hostname: grafana
+#      - "5050:5050"
 #    volumes:
-#      - "./data/grafana/:/var/lib/grafana"
-#    ports:
-#      - "3000:3000"
+#      - "./data/pgadmin:/var/lib/pgadmin"
+#    environment:
+#      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+#      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+#      PGADMIN_CONFIG_SERVER_MODE: ${PGADMIN_CONFIG_SERVER_MODE}
+#      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: ${PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED}
+#      PGADMIN_LISTEN_PORT: 5050
 #    depends_on:
-#      - clickhouse
-#  migration:
-#    container_name: migrations
-#    image: liquibase/liquibase:4.24.0
-#    volumes:
-#      - "./migrations/clickhouse:/liquibase/clickhouse"
-#      - "./migrations/drivers/clickhouse.jar:/liquibase/lib/clickhouse.jar"
-#    command: --defaultsFile=/liquibase/clickhouse/liquibase.properties --changeLogFile=/clickhouse/changelog.xml --logLevel=debug update
-#    depends_on:
-#      clickhouse:
+#      postgresql:
 #        condition: service_healthy
   qdrant:
     container_name: qdrant
@@ -88,17 +54,53 @@ services:
       test: wget --no-verbose --tries=1 http://localhost:8080/health || exit 1
       interval: 5s
     depends_on:
-#      migration:
-#        condition: service_completed_successfully
       qdrant:
-        condition: service_started
+        condition: service_healthy
+      postgresql:
+        condition: service_healthy
     environment:
-      - DB_PORT=5432
-      - DB_HOST=host.docker.internal
-      - DB_USER=admin
-      - DB_PASSWORD=admin
-      - DB_DATABASE=admin
-      - QDRANT_HOST=qdrant
+      DB_PORT: 5432
+      DB_HOST: host.docker.internal
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_DATABASE: ${POSTGRES_DATABASE}
+      VECTOR_DB_HOST: qdrant
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq:3-management-alpine
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 5s
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - "./data/rabbitmq/data/:/var/lib/rabbitmq"
+      - "./data/rabbitmq/log/:/var/log/rabbitmq"
+  flower:
+    container_name: flower
+    image: mher/flower:2.0.1
+    command: celery flower --persisten=True
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      CELERY_BROKER_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672/
+      FLOWER_PORT: 5555
+    ports:
+      - "5555:5555"
+    volumes:
+      - "./data/flower:/data"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+#  prometheus:
+#    container_name: prometheus
+#    image: prom/prometheus:v2.45.3
+#    volumes:
+#      - "./data/prometheus:/prometheus"
+#      - "./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+#    ports:
+#      - "9090:9090"
   nginx:
     container_name: nginx
     image: nginx:1.25.3
