@@ -6,11 +6,11 @@ instance_template:
     memory: 2g
     cores: 2
     core_fraction: 20
-  boot_disk_spec:
-    mode: READ_WRITE
-    disk_spec:
-      type_id: network-hdd
-      size: 30g
+#  boot_disk_spec:
+#    mode: READ_WRITE
+#    disk_spec:
+#      type_id: network-hdd
+#      size: 30g
 #      image_id: fd8m5bal0bi9********
   network_interface_specs:
     - network_id: enpnjes8b8rmi1q347mj
