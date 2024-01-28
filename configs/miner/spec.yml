@@ -44,7 +44,7 @@ scale_policy:
 #        target: 5
 #        service: message-queue
 deploy_policy:
-#  max_unavailable: 0
+  max_unavailable: 100
   startup_duration: 0s
   strategy: PROACTIVE
   minimal_action: RESTART
