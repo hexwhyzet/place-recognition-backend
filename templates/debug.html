@@ -1,16 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html style="font-family: Arial, sans-serif !important;">
 <head>
     <title>Debug</title>
 </head>
 <body>
-<h1>Closes matches</h1>
+<div style="margin: 15px">
+    <h1 style="font-size: 3em; margin: 0;">Recognition</h1>
+    <ul style="font-size: 1.3em;">
+        <li>Request id: {{ recognition.request_id }}</li>
+        <li>Descriptor 1x{{ recognition.descriptor_size }}: {{ descriptor }}</li>
+        <li>Timestamp: {{ recognition.timestamp.strftime(date_format) }} (MOSCOW: {{
+            recognition.timestamp.astimezone(moscow_timezone).strftime(date_format) }})
+        </li>
+        <li>Release name: {{ recognition.release_name }}</li>
+        <li>Debug token: {{ recognition.debug_token }}</li>
+        <li>Response time: {{ "{:.2f}".format(recognition_request.response_time) }} ms</li>
+        <li>Result building id: <b>{{ recognition.result_building_id }}</b></li>
+    </ul>
+    <h2 style="font-size: 2em">Closes matches</h2>
+</div>
 <div class="release-items-container"
-         style="display: flex; flex-wrap: wrap; align-content: flex-start;">
+     style="display: flex; flex-wrap: wrap; align-content: center; justify-content: space-evenly;">
     {% for release_item in release_items %}
-    <div style="margin: 5px; text-align: center; font-size: 1em">
-        <img src="{{ release_item.image_url }}" alt="Image">
-        <p>{{ release_item.building_id }}</p>
+    <div>
+        <img style="margin: 5px;" src="{{ release_item.image_url }}" alt="Image">
+        <div style="display: flex; flex-wrap: wrap; align-content: center; justify-content: center; align-items: center;">
+            {% if recognition.result_building_id == release_item.building_id %}
+            <div style="background-color: forestgreen; border-radius: 50%; width: 30px; height: 30px;"></div>
+            {% else %}
+            <div style="background-color: royalblue; border-radius: 50%; width: 30px; height: 30px;"></div>
+            {% endif %}
+            <div style="font-size: 2.5em; margin: 10px 15px;">{{ release_item.building_id }}</div>
+        </div>
     </div>
     {% endfor %}
 </div>

@@ -1,3 +1,4 @@
+import datetime
 import time
 import uuid
 from typing import List, Optional, Callable
@@ -14,16 +15,16 @@ from db.qdrant import GetQdrantClient
 from libs.coordinates import Coordinates, CoordinateSystem
 from libs.predictors import PredictByClosestDescriptor
 from models.geo import BuildingReadWithGroup, Building
-from models.logs import HTTPMethod, Recognition
+from models.logs import HTTPMethod
 from services.geo import select_geo_object_by_id, selected_geo_object_exists
-from services.logs import create_request, create_recognition, last_recognition
+from services.logs import create_request, create_recognition, last_recognition, get_request
 from services.release import release_exists
 
 IP = "0.0.0.0"
 PORT = 8080
 
 QDRANT_CLIENT = GetQdrantClient()
-DEFAULT_RELEASE_NAME = "beautiful_morse"
+DEFAULT_RELEASE_NAME = "sharp_hofstadter"
 
 
 class RecognizeData(BaseModel):
@@ -31,7 +32,6 @@ class RecognizeData(BaseModel):
     coordinates: Optional[Coordinates] = None
     direction: float = None
     release_name: str = None
-    debug_token: str = None
 
 
 class RequestLogRoute(APIRoute):
@@ -97,8 +97,6 @@ def health_routed():
 
 @router.post("/recognize", response_model=BuildingReadWithGroup)
 def recognize(recognize_data: RecognizeData, request: Request):
-    logger.info([recognize_data.coordinates, recognize_data.direction])
-
     session = request.state.buildings_info_db
 
     release_name = recognize_data.release_name or DEFAULT_RELEASE_NAME
@@ -124,7 +122,7 @@ def recognize(recognize_data: RecognizeData, request: Request):
                        coordinates=coordinates,
                        model="MixVPR",
                        predictor=PredictByClosestDescriptor.__name__,
-                       debug_token=recognize_data.debug_token)
+                       debug_token=request.headers.get("x-debug-token"))
 
     if not selected_geo_object_exists(session, Building, prediction.answer.building_id):
         raise Exception("Recognized building was not found in BuildingInfo database")
@@ -137,13 +135,23 @@ def recognize(recognize_data: RecognizeData, request: Request):
 
 @router.get("/debug/{debug_token}", response_model=BuildingReadWithGroup)
 def debug(debug_token: str, request: Request):
+    session = request.state.buildings_info_db
     recognition = last_recognition(session=request.state.buildings_info_db, debug_token=debug_token)
     if not recognition:
         raise HTTPException(status_code=404, detail="Debug token not found")
+    recognition_request = get_request(session, recognition.request_id)
     return templates.TemplateResponse(
         request=request,
         name="debug.html",
-        context={"release_items": recognition.release_items},
+        context={
+            "recognition": recognition,
+            "recognition_request": recognition_request,
+            "release_items": recognition.release_items,
+            "moscow_timezone": datetime.timezone(offset=datetime.timedelta(hours=3), name="Moscow"),
+            "date_format": '%Y-%m-%d, %H:%M:%S',
+            "descriptor": "[" + ", ".join(
+                list(map(lambda x: "{:.6f}".format(x), recognition.descriptor[:5]))) + ", ...]"
+        },
     )
 
 
