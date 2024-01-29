@@ -22,7 +22,8 @@ instance_template:
           ip_version: IPV4
   network_settings:
     type: STANDARD
-  scheduling_policy: { }
+  scheduling_policy:
+    preemptible: true
 #  placement_policy:
 #    placement_group_id: rmppvhrgm77g********
 scale_policy:
