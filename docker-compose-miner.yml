@@ -3,9 +3,7 @@ version: '3'
 services:
   worker:
     container_name: 'worker'
-    build:
-      context: ./
-      dockerfile: miner/Dockerfile
+    image: ${DOCKER_IMAGE}
     environment:
       AWS_SERVER_PUBLIC_KEY: ${AWS_SERVER_PUBLIC_KEY}
       AWS_SERVER_SECRET_KEY: ${AWS_SERVER_SECRET_KEY}
